@@ -111,11 +111,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
         
         await FirebaseAuthService().verifyOTP(
           _otpController.text,
-          onSuccess: () {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully! Please login.')));
-              context.go('/login');
-            }
+          onSuccess: () async {
+            // Once OTP is valid, create the Email/Password account
+            await FirebaseAuthService().signUpWithEmail(
+              _emailController.text, 
+              _passwordController.text,
+              onSuccess: () {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully! Please login.')));
+                  context.go('/login');
+                }
+              },
+              onError: (error) {
+                setState(() => _isLoading = false);
+                _showError("Phone verified, but Email Error: $error");
+              }
+            );
           },
           onError: (error) {
             setState(() => _isLoading = false);

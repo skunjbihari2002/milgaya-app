@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "644997878083",
+    "project_id": "milgaya-app-2026",
+    "storage_bucket": "milgaya-app-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:644997878083:android:33bcf4acb32520bb735ff6",
+        "android_client_info": {
+          "package_name": "com.milgaya.milgaya"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "644997878083-ng6h4s1uisgf39vj2eb79kuu9ks6u9up.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbX-LmCgX-FRQSGyeCIuKhQUoUujl_4rM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "644997878083-ng6h4s1uisgf39vj2eb79kuu9ks6u9up.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

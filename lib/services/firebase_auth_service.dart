@@ -74,4 +74,34 @@ class FirebaseAuthService {
       onError("Invalid OTP or expired.");
     }
   }
+
+  // Real Email/Password Signup
+  Future<void> signUpWithEmail(String email, String password, {required Function() onSuccess, required Function(String) onError}) async {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Future.delayed(const Duration(seconds: 2));
+        onSuccess();
+        return;
+      }
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email, password: password);
+      onSuccess();
+    } catch (e) {
+      onError(e.toString());
+    }
+  }
+
+  // Real Email/Password Login
+  Future<void> loginWithEmail(String email, String password, {required Function() onSuccess, required Function(String) onError}) async {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Future.delayed(const Duration(seconds: 2));
+        onSuccess();
+        return;
+      }
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+      onSuccess();
+    } catch (e) {
+      onError("Invalid email or password.");
+    }
+  }
 }

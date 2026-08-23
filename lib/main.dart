@@ -8,10 +8,14 @@ import 'package:milgaya/features/found/found_screen.dart';
 import 'package:milgaya/features/admin/admin_dashboard.dart';
 import 'package:milgaya/features/auth/signup_screen.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:milgaya/firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // TODO: Initialize Firebase once configured
-  // await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const ProviderScope(child: MilGayaApp()));
 }
 

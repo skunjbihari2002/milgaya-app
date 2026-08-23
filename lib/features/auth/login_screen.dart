@@ -29,7 +29,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!_isOtpLogin) {
       if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
-        _simulateLoading(() => context.go('/'));
+        setState(() => _isLoading = true);
+        await FirebaseAuthService().loginWithEmail(
+          _emailController.text,
+          _passwordController.text,
+          onSuccess: () {
+            if (mounted) {
+              setState(() => _isLoading = false);
+              context.go('/');
+            }
+          },
+          onError: (error) {
+            setState(() => _isLoading = false);
+            _showError(error);
+          }
+        );
       } else {
         _showError('Please enter valid Email/ID and Password.');
       }
