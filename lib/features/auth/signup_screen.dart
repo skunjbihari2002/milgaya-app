@@ -83,6 +83,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+  }
+
   void _handleSignUp() async {
     if (!_validateFields()) return;
 
