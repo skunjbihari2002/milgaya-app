@@ -40,7 +40,7 @@ class _LostItemFormScreenState extends State<LostItemFormScreen> {
                 _buildCategoryCard(Icons.phone_android, 'Phone'),
                 _buildCategoryCard(Icons.document_scanner, 'Document'),
                 _buildCategoryCard(Icons.cases_rounded, 'Bag'),
-                _buildCategoryCard(Icons.keys, 'Keys'),
+                _buildCategoryCard(Icons.key, 'Keys'),
                 _buildCategoryCard(Icons.more_horiz, 'Other'),
               ],
             ),

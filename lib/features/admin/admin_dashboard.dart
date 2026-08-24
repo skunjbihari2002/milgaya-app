@@ -236,8 +236,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           backgroundColor: item['type'] == 'Lost' ? Colors.red.shade100 : Colors.green.shade100,
                           child: Icon(item['type'] == 'Lost' ? Icons.search : Icons.check, color: item['type'] == 'Lost' ? Colors.red : Colors.green),
                         ),
-                        title: Text('\${item['title']} (by \${item['user']})'),
-                        subtitle: Text('Status: \$status | Type: \${item['type']}'),
+                        title: Text("\${item['title']} (by \${item['user']})"),
+                        subtitle: Text("Status: \$status | Type: \${item['type']}"),
                         trailing: PopupMenuButton(
                           itemBuilder: (context) => [
                             const PopupMenuItem(value: 'resolve', child: Text('Mark as Resolved')),
@@ -290,8 +290,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       final status = hub['status'] ?? 'Pending';
                       
                       return ListTile(
-                        title: Text('\${hub['name']}'),
-                        subtitle: Text('Location: \${hub['location']} | Status: \$status'),
+                        title: Text("\${hub['name']}"),
+                        subtitle: Text("Location: \${hub['location']} | Status: \$status"),
                         trailing: status == 'Pending' 
                           ? Row(
                               mainAxisSize: MainAxisSize.min,
@@ -349,8 +349,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       final disp = doc.data() as Map<String, dynamic>;
                       return ListTile(
                         leading: const Icon(Icons.warning, color: Colors.red, size: 40),
-                        title: Text('Report against \${disp['accused']} by \${disp['reporter']}'),
-                        subtitle: Text('Reason: \${disp['reason']}'),
+                        title: Text("Report against \${disp['accused']} by \${disp['reporter']}"),
+                        subtitle: Text("Reason: \${disp['reason']}"),
                         trailing: ElevatedButton(
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
                           onPressed: () async {
