@@ -58,11 +58,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
   
   bool _validateFields() {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _phoneController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showError('Please fill in all required fields.');
+    if (_nameController.text.isEmpty || _phoneController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showError('Please fill in Name, Phone, and Password.');
       return false;
     }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)) {
+    if (_emailController.text.isNotEmpty && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)) {
       _showError('Please enter a valid email address.');
       return false;
     }
@@ -75,7 +75,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return false;
     }
     if (!_agreedToTerms) {
-      _showError('You must agree to the Terms of Service and Privacy Policy to continue.');
+      _showError('You must agree to the Terms of Service to continue.');
       return false;
     }
     return true;
@@ -171,10 +171,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 32),
                   
-                  if (!_otpSent) ...[
+                    if (!_otpSent) ...[
                     _buildTextField(_nameController, 'Full Name *', Icons.person_outline),
                     const SizedBox(height: 16),
-                    _buildTextField(_emailController, 'Email Address *', Icons.email_outlined, isEmail: true),
+                    _buildTextField(_emailController, 'Email Address (Optional)', Icons.email_outlined, isEmail: true),
                     const SizedBox(height: 16),
                     _buildTextField(_phoneController, 'Phone Number *', Icons.phone_android, isPhone: true),
                     const SizedBox(height: 16),
@@ -203,12 +203,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Row(
                       children: [
                         Checkbox(value: _agreedToTerms, onChanged: (val) => setState(() => _agreedToTerms = val ?? false), activeColor: const Color(0xFF1976D2)),
-                        const Expanded(
-                          child: Text.rich(TextSpan(text: 'I agree to the ', children: [
-                            TextSpan(text: 'Terms of Service', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
-                            TextSpan(text: ' and '),
-                            TextSpan(text: 'Privacy Policy', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
-                          ]), style: TextStyle(fontSize: 12)),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              showDialog(context: context, builder: (ctx) => AlertDialog(
+                                title: const Text('Terms & Privacy'),
+                                content: const Text('These are the dummy terms and privacy policy for Milgaya App. Please accept to proceed.'),
+                                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))]
+                              ));
+                            },
+                            child: const Text.rich(TextSpan(text: 'I agree to the ', children: [
+                              TextSpan(text: 'Terms of Service', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                              TextSpan(text: ' and '),
+                              TextSpan(text: 'Privacy Policy', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                            ]), style: TextStyle(fontSize: 12)),
+                          ),
                         )
                       ],
                     ),
@@ -216,7 +225,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     // OTP Verification Step
                     const Text('Verification Required', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1976D2))),
                     const SizedBox(height: 8),
-                    Text('We sent a 4-digit OTP to ${_phoneController.text}. Enter it below to verify your account.', style: const TextStyle(color: Colors.grey)),
+                    Text('We sent an OTP to ${_phoneController.text}. Enter it below to verify.', style: const TextStyle(color: Colors.grey)),
                     const SizedBox(height: 24),
                     _buildTextField(_otpController, 'Enter OTP', Icons.message, isPhone: true),
                   ],
@@ -225,8 +234,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleSignUp,
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1976D2), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      onPressed: (_isLoading || (!_agreedToTerms && !_otpSent)) ? null : _handleSignUp,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1976D2), 
+                        foregroundColor: Colors.white, 
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                      ),
                       child: _isLoading ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white)) : Text(_otpSent ? 'VERIFY & CREATE ACCOUNT' : 'SEND OTP', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ),

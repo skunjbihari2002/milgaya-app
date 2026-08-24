@@ -132,29 +132,49 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (context) {
         final resetCtrl = TextEditingController();
-        return AlertDialog(
-          title: const Text('Reset Password'),
-          content: TextField(
-            controller: resetCtrl,
-            decoration: const InputDecoration(hintText: 'Enter registered Email or Phone', prefixIcon: Icon(Icons.email)),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
-            ElevatedButton(
-              onPressed: () {
-                if (resetCtrl.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter an email or phone number', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
-                } else {
-                  Navigator.pop(context);
-                  _simulateLoading(() {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset link sent to your contact!')));
-                  });
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1976D2), foregroundColor: Colors.white),
-              child: const Text('Send Link'),
-            ),
-          ],
+        bool isSending = false;
+        
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Reset Password'),
+              content: TextField(
+                controller: resetCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(hintText: 'Enter registered Email', prefixIcon: Icon(Icons.email)),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
+                ElevatedButton(
+                  onPressed: isSending ? null : () async {
+                    if (resetCtrl.text.isEmpty || !resetCtrl.text.contains('@')) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid email address'), backgroundColor: Colors.red));
+                      return;
+                    }
+                    
+                    setDialogState(() => isSending = true);
+                    await FirebaseAuthService().resetPassword(
+                      resetCtrl.text.trim(),
+                      onSuccess: () {
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset link sent to your email!')));
+                        }
+                      },
+                      onError: (error) {
+                        if (context.mounted) {
+                          setDialogState(() => isSending = false);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.red));
+                        }
+                      }
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1976D2), foregroundColor: Colors.white),
+                  child: isSending ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Send Link'),
+                ),
+              ],
+            );
+          }
         );
       },
     );
