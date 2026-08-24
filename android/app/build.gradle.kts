@@ -10,7 +10,7 @@ plugins {
 android {
     namespace = "com.milgaya.milgaya"
     compileSdk = 34
-    // ndkVersion = flutter.ndkVersion
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
