@@ -7,6 +7,8 @@ import 'package:milgaya/features/lost/lost_screen.dart';
 import 'package:milgaya/features/found/found_screen.dart';
 import 'package:milgaya/features/admin/admin_dashboard.dart';
 import 'package:milgaya/features/auth/signup_screen.dart';
+import 'package:milgaya/features/auth/screens/terms_screen.dart';
+import 'package:milgaya/features/auth/screens/privacy_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:milgaya/firebase_options.dart';
@@ -46,6 +48,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignUpScreen(),
+      ),
+      GoRoute(
+        path: '/terms',
+        builder: (context, state) => const TermsScreen(),
+      ),
+      GoRoute(
+        path: '/privacy',
+        builder: (context, state) => const PrivacyScreen(),
       ),
     ],
   );

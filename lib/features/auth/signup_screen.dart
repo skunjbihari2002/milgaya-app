@@ -95,13 +95,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
       // Call Firebase Auth Service
       await FirebaseAuthService().sendOTP(
         _phoneController.text,
-        onSuccess: () {
+        onCodeSent: (verificationId) {
           setState(() {
             _isLoading = false;
             _otpSent = true;
           });
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('OTP sent to your phone!')));
+        },
+        onVerified: () async {
+          // Auto-verified without needing to enter OTP!
+          _completeSignUpProcess();
         },
         onError: (error) {
           setState(() => _isLoading = false);
@@ -116,41 +120,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _otpController.text,
           onSuccess: () async {
             // Once OTP is valid, create the Email/Password account
-            // If email is not provided, create a dummy email to support Phone+Password login
-            String loginEmail = _emailController.text.isNotEmpty ? _emailController.text : '${_phoneController.text}@milgaya.app';
-            
-            await FirebaseAuthService().signUpWithEmail(
-              loginEmail, 
-              _passwordController.text,
-              onSuccess: () async {
-                try {
-                  // Save user details to Firestore
-                  final uid = FirebaseAuthService().getCurrentUserId() ?? 'temp_mock_id';
-                  await FirestoreService().createUser(uid, {
-                    'name': _nameController.text,
-                    'email': _emailController.text, // Store actual email (or empty)
-                    'phone': _phoneController.text,
-                    'city': _cityController.text,
-                    'state': _stateController.text,
-                    'loginMethod': 'Phone + Password',
-                    'status': 'Active',
-                    'role': 'user',
-                  });
-
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully! Please login.')));
-                    context.go('/login');
-                  }
-                } catch (e) {
-                  setState(() => _isLoading = false);
-                  _showError("Database Error: $e");
-                }
-              },
-              onError: (error) {
-                setState(() => _isLoading = false);
-                _showError("Phone verified, but Auth Error: $error");
-              }
-            );
+            _completeSignUpProcess();
           },
           onError: (error) {
             setState(() => _isLoading = false);
@@ -161,6 +131,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _showError('Please enter a valid OTP.');
       }
     }
+  }
+
+  void _completeSignUpProcess() async {
+    // If email is not provided, create a dummy email to support Phone+Password login
+    String loginEmail = _emailController.text.isNotEmpty ? _emailController.text : '${_phoneController.text}@milgaya.app';
+    
+    await FirebaseAuthService().signUpWithEmail(
+      loginEmail, 
+      _passwordController.text,
+      onSuccess: () async {
+        try {
+          // Save user details to Firestore
+          final uid = FirebaseAuthService().getCurrentUserId() ?? 'temp_mock_id';
+          await FirestoreService().createUser(uid, {
+            'name': _nameController.text,
+            'email': _emailController.text, // Store actual email (or empty)
+            'phone': _phoneController.text,
+            'city': _cityController.text,
+            'state': _stateController.text,
+            'loginMethod': 'Phone + Password',
+            'status': 'Active',
+            'role': 'user',
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully! Please login.')));
+            context.go('/login');
+          }
+        } catch (e) {
+          setState(() => _isLoading = false);
+          _showError("Database Error: $e");
+        }
+      },
+      onError: (error) {
+        setState(() => _isLoading = false);
+        _showError("Phone verified, but Auth Error: $error");
+      }
+    );
   }
 
   @override
@@ -226,20 +234,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       children: [
                         Checkbox(value: _agreedToTerms, onChanged: (val) => setState(() => _agreedToTerms = val ?? false), activeColor: const Color(0xFF1976D2)),
                         Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              showDialog(context: context, builder: (ctx) => AlertDialog(
-                                title: const Text('Terms & Privacy'),
-                                content: const Text('These are the dummy terms and privacy policy for Milgaya App. Please accept to proceed.'),
-                                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))]
-                              ));
-                            },
-                            child: const Text.rich(TextSpan(text: 'I agree to the ', children: [
-                              TextSpan(text: 'Terms of Service', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
-                              TextSpan(text: ' and '),
-                              TextSpan(text: 'Privacy Policy', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
-                            ]), style: TextStyle(fontSize: 12)),
-                          ),
+                          child: Text.rich(TextSpan(text: 'I agree to the ', children: [
+                            WidgetSpan(
+                              child: GestureDetector(
+                                onTap: () => context.push('/terms'),
+                                child: const Text('Terms of Service', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                              ),
+                            ),
+                            const TextSpan(text: ' and '),
+                            WidgetSpan(
+                              child: GestureDetector(
+                                onTap: () => context.push('/privacy'),
+                                child: const Text('Privacy Policy', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                              ),
+                            ),
+                          ]), style: const TextStyle(fontSize: 12)),
                         )
                       ],
                     ),

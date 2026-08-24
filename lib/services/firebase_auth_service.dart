@@ -14,14 +14,19 @@ class FirebaseAuthService {
   }
 
   // Real OTP Send via Firebase
-  Future<void> sendOTP(String phoneNumber, {required Function() onSuccess, required Function(String) onError}) async {
+  Future<void> sendOTP(
+    String phoneNumber, {
+    required Function(String verificationId) onCodeSent,
+    required Function() onVerified,
+    required Function(String) onError,
+  }) async {
     try {
       // Check if Firebase is actually configured to prevent crashing before the user sets it up
       if (Firebase.apps.isEmpty) {
         // Fallback to mock for now since backend is not connected
         debugPrint("FIREBASE NOT CONFIGURED: Falling back to Mock OTP.");
         await Future.delayed(const Duration(seconds: 2));
-        onSuccess();
+        onCodeSent("mock_verification_id");
         return;
       }
 
@@ -30,14 +35,14 @@ class FirebaseAuthService {
         verificationCompleted: (PhoneAuthCredential credential) async {
           // Auto-resolution (Android only)
           await FirebaseAuth.instance.signInWithCredential(credential);
-          onSuccess();
+          onVerified();
         },
         verificationFailed: (FirebaseAuthException e) {
           onError(e.message ?? 'Verification failed');
         },
         codeSent: (String verificationId, int? resendToken) {
           _verificationId = verificationId;
-          onSuccess();
+          onCodeSent(verificationId);
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           _verificationId = verificationId;

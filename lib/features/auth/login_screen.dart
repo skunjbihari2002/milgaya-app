@@ -30,8 +30,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_isOtpLogin) {
       if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
         setState(() => _isLoading = true);
+        
+        // Map phone number to email for Phone+Password login seamlessly
+        String emailOrPhone = _emailController.text.trim();
+        if (!emailOrPhone.contains('@') && RegExp(r'^[0-9]+$').hasMatch(emailOrPhone)) {
+          emailOrPhone = '$emailOrPhone@milgaya.app';
+        }
+
         await FirebaseAuthService().loginWithEmail(
-          _emailController.text,
+          emailOrPhone,
           _passwordController.text,
           onSuccess: () {
             if (mounted) {
@@ -72,12 +79,20 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() => _isLoading = true);
           await FirebaseAuthService().sendOTP(
             _phoneController.text,
-            onSuccess: () {
+            onCodeSent: (verificationId) {
               setState(() {
                 _isLoading = false;
                 _otpSent = true;
               });
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('OTP sent successfully!')));
+            },
+            onVerified: () {
+              // Auto-verified without needing to enter OTP!
+              if (mounted) {
+                setState(() => _isLoading = false);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone verified automatically!')));
+                context.go('/');
+              }
             },
             onError: (error) {
               setState(() => _isLoading = false);
