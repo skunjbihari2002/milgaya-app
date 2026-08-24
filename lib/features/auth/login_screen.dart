@@ -115,10 +115,16 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
 
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pop(context); // Close dialog
-        context.go('/'); // Go to home
+        // Prevent bypassing. Show error since OAuth keys aren't configured yet.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Authentication Failed: $provider OAuth keys not configured on backend.'),
+            backgroundColor: Colors.red,
+          )
+        );
       }
     });
   }
