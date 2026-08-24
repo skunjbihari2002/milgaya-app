@@ -1,24 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:milgaya/services/mock_database.dart';
 
-class LostFoundTab extends StatelessWidget {
+class LostFoundTab extends StatefulWidget {
   const LostFoundTab({super.key});
 
   @override
+  State<LostFoundTab> createState() => _LostFoundTabState();
+}
+
+class _LostFoundTabState extends State<LostFoundTab> {
+  String _selectedFilter = 'All';
+
+  @override
   Widget build(BuildContext context) {
+    final items = MockDatabase().lostFoundItems.where((item) {
+      if (_selectedFilter == 'All') return true;
+      return item['type'] == _selectedFilter;
+    }).toList();
+
     return Column(
       children: [
         _buildHeader(),
-        _buildTopFilter(),
+        _buildFilterPills(),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildItemCard('FOUND', 'Wallet/Purse', 'Found: Brown leather wallet', 'Found a brown leather wallet near South Congress Ave. Contains several cards — withholding full deta...', 'Sidhi Bus Stand', 'Mike Davis', '4h', null, Icons.account_balance_wallet, Colors.green),
-              _buildItemCard('LOST', 'Pet', 'Golden Retriever puppy — Max', 'Lost my 8-month-old Golden Retriever puppy Max near Zilker Park. He has a blue collar with a he...', 'Zilker Park area', 'John Smith', '6h', '\$100', Icons.pets, Colors.orange),
-              _buildItemCard('FOUND', 'Keys', 'Found: Honda car keys', 'Found a set of Honda car keys with a red rubber keychain near The Domain parking area. Has about...', 'The Domain parking area', 'Sarah Johnson', '8h', null, Icons.key, Colors.green),
-              _buildItemCard('LOST', 'Electronics', 'Deep Purple iPhone 14 Pro Max', 'Lost my deep purple iPhone 14 Pro Max at Rainey Street area. Has a clear case with a few stickers. I...', 'Rainey Street area', 'Unknown', '12h', '\$50', Icons.phone_iphone, Colors.orange),
-            ],
-          ),
+          child: items.isEmpty
+            ? const Center(child: Text('No items found.', style: TextStyle(color: Colors.grey)))
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return _buildItemCard(
+                    item['type'], 
+                    item['title'], 
+                    item['desc'], 
+                    item['user'], 
+                    item['time'], 
+                    item['tagColor'] == 'red' ? Colors.red : Colors.green
+                  );
+                },
+              ),
         ),
       ],
     );
@@ -31,122 +52,121 @@ class LostFoundTab extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text('Lost & Found', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A))),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.security, color: Colors.green),
-                tooltip: 'Verified Safe Hubs',
-                onPressed: () {},
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(20)),
-                child: const Row(
-                  children: [
-                    Icon(Icons.location_on, size: 16, color: Color(0xFF1976D2)),
-                    SizedBox(width: 4),
-                    Text('Sidhi, MP', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
-                    Icon(Icons.keyboard_arrow_down, size: 16, color: Color(0xFF1976D2)),
-                  ],
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(20)),
+            child: const Row(
+              children: [
+                Icon(Icons.location_on, size: 16, color: Color(0xFF1976D2)),
+                SizedBox(width: 4),
+                Text('Sidhi, MP', style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
+                Icon(Icons.keyboard_arrow_down, size: 16, color: Color(0xFF1976D2)),
+              ],
+            ),
           )
         ],
       ),
     );
   }
 
-  Widget _buildTopFilter() {
+  Widget _buildFilterPills() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          _buildPill('All'),
+          _buildPill('Lost'),
+          _buildPill('Found'),
+          const Spacer(),
+          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPill(String text) {
+    bool isSelected = _selectedFilter == text;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = text),
       child: Container(
-        decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(24)),
-        child: Row(
-          children: [
-            Expanded(child: _buildFilterTab('All Posts', true)),
-            Expanded(child: _buildFilterTab('Lost Items', false)),
-            Expanded(child: _buildFilterTab('Found Items', false)),
-          ],
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1976D2) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? const Color(0xFF1976D2) : Colors.grey.shade300),
         ),
+        child: Text(text, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade700, fontWeight: FontWeight.bold)),
       ),
     );
   }
 
-  Widget _buildFilterTab(String text, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF1976D2) : Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildItemCard(String type, String category, String title, String desc, String location, String user, String time, String? reward, IconData icon, Color color) {
+  Widget _buildItemCard(String type, String title, String desc, String user, String time, Color tagColor) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       color: Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image placeholder
+          Container(
+            height: 150,
+            width: double.infinity,
+            decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+            child: const Center(child: Icon(Icons.image, size: 40, color: Colors.grey)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Icon(icon, color: color, size: 30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: tagColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      child: Text(type.toUpperCase(), style: TextStyle(color: tagColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    )
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                const SizedBox(height: 12),
+                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(desc, style: const TextStyle(color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    CircleAvatar(radius: 14, backgroundColor: Colors.blue.shade50, child: Text(user.isNotEmpty ? user[0] : 'U', style: const TextStyle(fontSize: 12, color: Color(0xFF1976D2), fontWeight: FontWeight.bold))),
+                    const SizedBox(width: 8),
+                    Text(user, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.orange.shade200)),
+                      child: const Row(
                         children: [
-                          Icon(type == 'LOST' ? Icons.search : Icons.star, size: 14, color: color),
-                          const SizedBox(width: 4),
-                          Text(type, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 8),
-                          Text(category, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          Icon(Icons.security, size: 12, color: Colors.orange),
+                          SizedBox(width: 4),
+                          Text('Safe Hub Match', style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                if (reward != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.yellow.shade100, borderRadius: BorderRadius.circular(16)),
-                    child: Text(reward, style: TextStyle(color: Colors.orange.shade800, fontWeight: FontWeight.bold)),
-                  ),
+                    ),
+                  ],
+                )
               ],
             ),
-            const SizedBox(height: 12),
-            Text(desc, style: const TextStyle(color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Expanded(child: Text(location, style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis)),
-                CircleAvatar(radius: 12, backgroundColor: Colors.blue.shade100, child: Text(user[0], style: const TextStyle(fontSize: 12, color: Color(0xFF1976D2)))),
-                const SizedBox(width: 4),
-                Text(user, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                const SizedBox(width: 8),
-                Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              ],
-            )
-          ],
-        ),
+          )
+        ],
       ),
     );
   }

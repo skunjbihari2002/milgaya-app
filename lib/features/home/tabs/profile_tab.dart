@@ -79,16 +79,31 @@ class ProfileTab extends StatelessWidget {
                 _buildActionCard(Icons.search, 'Phone', 'Lost • 24d ago', 'active', isOrange: true, showMilgayaTools: true),
                 
                 const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.location_on_outlined, color: Color(0xFF1976D2)),
-                      SizedBox(width: 12),
-                      Expanded(child: Text('Change My Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
-                      Icon(Icons.chevron_right, color: Colors.grey),
-                    ],
+                GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context, 
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Change Location'),
+                        content: const TextField(decoration: InputDecoration(hintText: 'Enter new City/PIN code')),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Update')),
+                        ]
+                      )
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, color: Color(0xFF1976D2)),
+                        SizedBox(width: 12),
+                        Expanded(child: Text('Change My Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                        Icon(Icons.chevron_right, color: Colors.grey),
+                      ],
+                    ),
                   ),
                 ),
                 
@@ -97,7 +112,28 @@ class ProfileTab extends StatelessWidget {
                   width: double.infinity,
                   height: 50,
                   child: OutlinedButton.icon(
-                    onPressed: () {},
+                    onPressed: () {
+                      showDialog(
+                        context: context, 
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Log Out'),
+                          content: const Text('Are you sure you want to log out?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                // Assuming go_router is setup to go to /login
+                                // context.go('/login');
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out successfully (Mock)')));
+                              }, 
+                              child: const Text('Log Out')
+                            ),
+                          ]
+                        )
+                      );
+                    },
                     icon: const Icon(Icons.logout, color: Colors.red),
                     label: const Text('Log Out', style: TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(

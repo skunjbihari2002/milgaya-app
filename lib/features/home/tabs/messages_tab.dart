@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:milgaya/services/mock_database.dart';
 
-class MessagesTab extends StatelessWidget {
+class MessagesTab extends StatefulWidget {
   const MessagesTab({super.key});
 
   @override
+  State<MessagesTab> createState() => _MessagesTabState();
+}
+
+class _MessagesTabState extends State<MessagesTab> {
+  @override
   Widget build(BuildContext context) {
+    final msgs = MockDatabase().messages;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -19,53 +27,49 @@ class MessagesTab extends StatelessWidget {
           child: const Text('CHATS', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1)),
         ),
         Expanded(
-          child: ListView(
-            children: [
-              _buildMessageItem('Sarah Johnson', 'Help', 'Grocery pickup from HEB', 'Great! Are you available this afternoon?', '31m', Colors.blue),
-              const Divider(height: 1, indent: 70),
-              _buildMessageItem('Sarah Johnson', 'Lost & Found', 'Deep Purple iPhone 14 Pro Max', 'Can you describe the stickers on the case?', '2h', Colors.orange),
-            ],
-          ),
+          child: msgs.isEmpty
+            ? const Center(child: Text('No messages yet', style: TextStyle(color: Colors.grey)))
+            : ListView.separated(
+                itemCount: msgs.length,
+                separatorBuilder: (ctx, i) => const Divider(height: 1, indent: 70),
+                itemBuilder: (context, index) {
+                  final m = msgs[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    leading: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.blue.shade50,
+                          child: Text(m['avatar'], style: const TextStyle(color: Color(0xFF1976D2), fontSize: 20, fontWeight: FontWeight.bold)),
+                        ),
+                        if (m['unread'])
+                          Positioned(
+                            right: 0, top: 0,
+                            child: Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2))),
+                          )
+                      ],
+                    ),
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(m['name'], style: TextStyle(fontWeight: m['unread'] ? FontWeight.bold : FontWeight.normal, fontSize: 16)),
+                        Text(m['time'], style: TextStyle(color: m['unread'] ? const Color(0xFF1976D2) : Colors.grey, fontSize: 12, fontWeight: m['unread'] ? FontWeight.bold : FontWeight.normal)),
+                      ],
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(m['msg'], style: TextStyle(color: m['unread'] ? Colors.black87 : Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                    onTap: () {
+                      setState(() => m['unread'] = false);
+                    },
+                  );
+                },
+              ),
         ),
       ],
-    );
-  }
-
-  Widget _buildMessageItem(String name, String type, String item, String msg, String time, Color tagColor) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundColor: Colors.blue.shade50,
-        child: Text(name[0], style: const TextStyle(color: Color(0xFF1976D2), fontSize: 20, fontWeight: FontWeight.bold)),
-      ),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          Text(time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: tagColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                child: Text(type, style: TextStyle(color: tagColor, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Text(item, style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis)),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(msg, style: const TextStyle(color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
     );
   }
 }

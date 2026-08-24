@@ -15,13 +15,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 1; // Default to Lost & Found based on images
 
-  final List<Widget> _tabs = [
-    const HelpTab(),
-    const LostFoundTab(),
-    const PostTab(),
-    const MessagesTab(),
-    const ProfileTab(),
-  ];
+  late final List<Widget> _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = [
+      const HelpTab(),
+      const LostFoundTab(),
+      PostTab(onNavigateToTab: (index) => setState(() => _currentIndex = index)),
+      const MessagesTab(),
+      const ProfileTab(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {

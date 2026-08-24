@@ -1,24 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:milgaya/services/mock_database.dart';
 
-class HelpTab extends StatelessWidget {
+class HelpTab extends StatefulWidget {
   const HelpTab({super.key});
 
   @override
+  State<HelpTab> createState() => _HelpTabState();
+}
+
+class _HelpTabState extends State<HelpTab> {
+  String _selectedFilter = 'All';
+  final List<String> _filters = ['All', 'Moving', 'Pet Care', 'Tech Help', 'Errands', 'Other'];
+
+  @override
   Widget build(BuildContext context) {
+    // Filter the items from mock database based on selected pill
+    final filteredRequests = MockDatabase().helpRequests.where((req) {
+      if (_selectedFilter == 'All') return true;
+      return req['category'].toString().toUpperCase() == _selectedFilter.toUpperCase();
+    }).toList();
+
     return Column(
       children: [
         _buildHeader(),
         _buildFilterPills(),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildHelpCard('PET CARE', 'Dog walking needed this weekend', 'Need someone to walk my 2-year-old Labrador, Max, 45 minutes each morning this weekend. Very...', 'Sarah Johnson', '5h', '\$25', Icons.pets),
-              _buildHelpCard('TECH HELP', 'Laptop tech support needed', 'My MacBook is running slow and needs a tune-up. Looking for someone experienced to clean it up, re...', 'John Smith', '1d', '\$40', Icons.computer),
-              _buildHelpCard('YARD WORK', 'Garden cleanup and lawn mowing', 'Backyard needs serious cleanup - overgrown weeds, grass mowing, and light tidying. All tools pr...', 'Mike Davis', '2d', '\$60', Icons.eco),
-              _buildHelpCard('OTHER', 'I want a person that help us to write a notes.', 'Hdhskks', 'Unknown', '3d', '\$1', Icons.build),
-            ],
-          ),
+          child: filteredRequests.isEmpty 
+            ? const Center(child: Text('No help requests found in this category.', style: TextStyle(color: Colors.grey)))
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: filteredRequests.length,
+                itemBuilder: (context, index) {
+                  final req = filteredRequests[index];
+                  IconData icon = Icons.build;
+                  if (req['icon'] == 'pets') icon = Icons.pets;
+                  if (req['icon'] == 'computer') icon = Icons.computer;
+                  if (req['icon'] == 'eco') icon = Icons.eco;
+                  
+                  return _buildHelpCard(
+                    req['category'], 
+                    req['title'], 
+                    req['desc'], 
+                    req['user'], 
+                    req['time'], 
+                    req['price'], 
+                    icon
+                  );
+                },
+              ),
         ),
       ],
     );
@@ -53,27 +82,24 @@ class HelpTab extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        children: [
-          _buildPill('All', true),
-          _buildPill('Moving', false),
-          _buildPill('Pet Care', false),
-          _buildPill('Tech Help', false),
-          _buildPill('Errands', false),
-        ],
+        children: _filters.map((filter) => _buildPill(filter, _selectedFilter == filter)).toList(),
       ),
     );
   }
 
   Widget _buildPill(String text, bool isSelected) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF1976D2) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isSelected ? const Color(0xFF1976D2) : Colors.grey.shade300),
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = text),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF1976D2) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? const Color(0xFF1976D2) : Colors.grey.shade300),
+        ),
+        child: Text(text, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade700, fontWeight: FontWeight.bold)),
       ),
-      child: Text(text, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade700, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -118,7 +144,7 @@ class HelpTab extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                CircleAvatar(radius: 12, backgroundColor: Colors.blue.shade100, child: Text(user[0], style: const TextStyle(fontSize: 12, color: Color(0xFF1976D2)))),
+                CircleAvatar(radius: 12, backgroundColor: Colors.blue.shade100, child: Text(user.isNotEmpty ? user[0] : 'U', style: const TextStyle(fontSize: 12, color: Color(0xFF1976D2)))),
                 const SizedBox(width: 8),
                 Text(user, style: const TextStyle(fontWeight: FontWeight.bold)),
                 const Spacer(),
