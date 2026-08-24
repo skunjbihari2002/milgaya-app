@@ -30,6 +30,9 @@ jobs:
       - name: Get Flutter Dependencies
         run: flutter pub get
 
+      - name: Accept Android Licenses
+        run: yes | flutter doctor --android-licenses
+
       - name: Build Release APK
         run: flutter build apk --release
 
@@ -40,10 +43,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: milgaya-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/*.apk
 
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: milgaya-release-aab
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: build/app/outputs/bundle/release/*.aab
