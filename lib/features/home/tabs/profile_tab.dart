@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ProfileTab extends StatelessWidget {
@@ -5,150 +7,178 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Blue Profile Header
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(color: Color(0xFF1976D2)),
-            child: Column(
-              children: [
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.white24,
-                  child: Text('A', style: TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) {
+      return const Center(child: Text('Not logged in'));
+    }
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return const Center(child: Text('Error loading profile'));
+        
+        final user = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+        final name = user['name'] ?? 'Guest User';
+        final email = user['email'] ?? FirebaseAuth.instance.currentUser?.email ?? 'No email';
+        final city = user['city'] ?? 'Bhopal';
+        final state = user['state'] ?? 'MP';
+        final avatar = name.isNotEmpty ? name[0].toUpperCase() : 'G';
+
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              // Blue Profile Header
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(color: Color(0xFF1976D2)),
+                child: Column(
                   children: [
-                    const Text('Alex Kim', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.verified, color: Colors.white, size: 14),
-                          SizedBox(width: 4),
-                          Text('Verified', style: TextStyle(color: Colors.white, fontSize: 12)),
-                        ],
-                      ),
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.white24,
+                      child: Text(avatar, style: const TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.verified, color: Colors.white, size: 14),
+                              SizedBox(width: 4),
+                              Text('Verified', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            ],
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(email, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.location_on_outlined, color: Colors.white70, size: 16),
+                        const SizedBox(width: 4),
+                        Text('\$city, \$state • Tap to change', style: const TextStyle(color: Colors.white70)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        _buildStatBox('4.7', 'Rating'),
+                        const SizedBox(width: 12),
+                        _buildStatBox('5', 'Helps Done'),
+                        const SizedBox(width: 12),
+                        _buildStatBox('1', 'My Posts'),
+                      ],
                     )
                   ],
                 ),
-                const SizedBox(height: 4),
-                const Text('alex@example.com', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 8),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              ),
+              
+              // Body Links
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.location_on_outlined, color: Colors.white70, size: 16),
-                    SizedBox(width: 4),
-                    Text('Sidhi, MP • Tap to change', style: TextStyle(color: Colors.white70)),
+                    const Text('My Help Requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    _buildActionCard(Icons.security, 'I want a person that help us to writ...', '\$1 • 24d ago', 'open'),
+                    
+                    const SizedBox(height: 24),
+                    const Text('My Lost & Found Posts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    _buildActionCard(Icons.search, 'Phone', 'Lost • 24d ago', 'active', isOrange: true, showMilgayaTools: true),
+                    
+                    const SizedBox(height: 24),
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context, 
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Change Location'),
+                            content: const TextField(decoration: InputDecoration(hintText: 'Enter new City/PIN code')),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Update location in Firestore (mocked UI for now)
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location updating...')));
+                                }, 
+                                child: const Text('Update')
+                              ),
+                            ]
+                          )
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.location_on_outlined, color: Color(0xFF1976D2)),
+                            SizedBox(width: 12),
+                            Expanded(child: Text('Change My Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                            Icon(Icons.chevron_right, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          showDialog(
+                            context: context, 
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Log Out'),
+                              content: const Text('Are you sure you want to log out?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                                  onPressed: () async {
+                                    Navigator.pop(ctx);
+                                    await FirebaseAuth.instance.signOut();
+                                    // Normally context.go('/login') here if router listens to auth state
+                                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out successfully!')));
+                                  }, 
+                                  child: const Text('Log Out')
+                                ),
+                              ]
+                            )
+                          );
+                        },
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        label: const Text('Log Out', style: TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.red.shade50,
+                          side: BorderSide(color: Colors.red.shade100),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
                   ],
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    _buildStatBox('4.7', 'Rating'),
-                    const SizedBox(width: 12),
-                    _buildStatBox('5', 'Helps Done'),
-                    const SizedBox(width: 12),
-                    _buildStatBox('1', 'My Posts'),
-                  ],
-                )
-              ],
-            ),
+              )
+            ],
           ),
-          
-          // Body Links
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('My Help Requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _buildActionCard(Icons.security, 'I want a person that help us to writ...', '\$1 • 24d ago', 'open'),
-                
-                const SizedBox(height: 24),
-                const Text('My Lost & Found Posts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _buildActionCard(Icons.search, 'Phone', 'Lost • 24d ago', 'active', isOrange: true, showMilgayaTools: true),
-                
-                const SizedBox(height: 24),
-                GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context, 
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Change Location'),
-                        content: const TextField(decoration: InputDecoration(hintText: 'Enter new City/PIN code')),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Update')),
-                        ]
-                      )
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.location_on_outlined, color: Color(0xFF1976D2)),
-                        SizedBox(width: 12),
-                        Expanded(child: Text('Change My Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
-                        Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context, 
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Log Out'),
-                          content: const Text('Are you sure you want to log out?'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                // Assuming go_router is setup to go to /login
-                                // context.go('/login');
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out successfully (Mock)')));
-                              }, 
-                              child: const Text('Log Out')
-                            ),
-                          ]
-                        )
-                      );
-                    },
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    label: const Text('Log Out', style: TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.red.shade50,
-                      side: BorderSide(color: Colors.red.shade100),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
-          )
-        ],
-      ),
+        );
+      }
     );
   }
 

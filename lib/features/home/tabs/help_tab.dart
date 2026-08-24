@@ -1,5 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:milgaya/services/mock_database.dart';
+import 'package:milgaya/services/firestore_service.dart';
 
 class HelpTab extends StatefulWidget {
   const HelpTab({super.key});
@@ -14,40 +15,58 @@ class _HelpTabState extends State<HelpTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter the items from mock database based on selected pill
-    final filteredRequests = MockDatabase().helpRequests.where((req) {
-      if (_selectedFilter == 'All') return true;
-      return req['category'].toString().toUpperCase() == _selectedFilter.toUpperCase();
-    }).toList();
-
     return Column(
       children: [
         _buildHeader(),
         _buildFilterPills(),
         Expanded(
-          child: filteredRequests.isEmpty 
-            ? const Center(child: Text('No help requests found in this category.', style: TextStyle(color: Colors.grey)))
-            : ListView.builder(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirestoreService().getHelpRequestsStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return const Center(child: Text('Error loading help requests'));
+              }
+              
+              final allRequests = snapshot.data?.docs ?? [];
+              
+              // Filter locally for now since we just pull all
+              final filteredRequests = allRequests.where((doc) {
+                if (_selectedFilter == 'All') return true;
+                final data = doc.data() as Map<String, dynamic>;
+                final category = data['category']?.toString().toUpperCase() ?? '';
+                return category == _selectedFilter.toUpperCase();
+              }).toList();
+              
+              if (filteredRequests.isEmpty) {
+                return const Center(child: Text('No help requests found in this category.', style: TextStyle(color: Colors.grey)));
+              }
+              
+              return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: filteredRequests.length,
                 itemBuilder: (context, index) {
-                  final req = filteredRequests[index];
+                  final req = filteredRequests[index].data() as Map<String, dynamic>;
                   IconData icon = Icons.build;
                   if (req['icon'] == 'pets') icon = Icons.pets;
                   if (req['icon'] == 'computer') icon = Icons.computer;
                   if (req['icon'] == 'eco') icon = Icons.eco;
                   
                   return _buildHelpCard(
-                    req['category'], 
-                    req['title'], 
-                    req['desc'], 
-                    req['user'], 
-                    req['time'], 
-                    req['price'], 
+                    req['category'] ?? 'OTHER', 
+                    req['title'] ?? 'No Title', 
+                    req['desc'] ?? '', 
+                    req['user'] ?? 'Unknown', 
+                    req['time'] ?? 'Just now', 
+                    req['price'] ?? 'Negotiable', 
                     icon
                   );
                 },
-              ),
+              );
+            }
+          ),
         ),
       ],
     );

@@ -1,5 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:milgaya/services/mock_database.dart';
+import 'package:milgaya/services/firestore_service.dart';
 
 class LostFoundTab extends StatefulWidget {
   const LostFoundTab({super.key});
@@ -13,33 +14,43 @@ class _LostFoundTabState extends State<LostFoundTab> {
 
   @override
   Widget build(BuildContext context) {
-    final items = MockDatabase().lostFoundItems.where((item) {
-      if (_selectedFilter == 'All') return true;
-      return item['type'] == _selectedFilter;
-    }).toList();
-
     return Column(
       children: [
         _buildHeader(),
         _buildFilterPills(),
         Expanded(
-          child: items.isEmpty
-            ? const Center(child: Text('No items found.', style: TextStyle(color: Colors.grey)))
-            : ListView.builder(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirestoreService().getPostsStream(_selectedFilter),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return const Center(child: Text('Error loading posts'));
+              }
+              
+              final items = snapshot.data?.docs ?? [];
+              if (items.isEmpty) {
+                return const Center(child: Text('No items found.', style: TextStyle(color: Colors.grey)));
+              }
+              
+              return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: items.length,
                 itemBuilder: (context, index) {
-                  final item = items[index];
+                  final itemData = items[index].data() as Map<String, dynamic>;
                   return _buildItemCard(
-                    item['type'], 
-                    item['title'], 
-                    item['desc'], 
-                    item['user'], 
-                    item['time'], 
-                    item['tagColor'] == 'red' ? Colors.red : Colors.green
+                    itemData['type'] ?? 'Unknown', 
+                    itemData['title'] ?? 'No Title', 
+                    itemData['desc'] ?? '', 
+                    itemData['user'] ?? 'Unknown', 
+                    itemData['time'] ?? 'Recently', 
+                    itemData['tagColor'] == 'red' ? Colors.red : Colors.green
                   );
                 },
-              ),
+              );
+            }
+          ),
         ),
       ],
     );

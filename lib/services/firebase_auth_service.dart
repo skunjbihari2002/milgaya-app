@@ -9,6 +9,10 @@ class FirebaseAuthService {
 
   String? _verificationId;
 
+  String? getCurrentUserId() {
+    return FirebaseAuth.instance.currentUser?.uid;
+  }
+
   // Real OTP Send via Firebase
   Future<void> sendOTP(String phoneNumber, {required Function() onSuccess, required Function(String) onError}) async {
     try {

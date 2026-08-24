@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:milgaya/services/firebase_auth_service.dart';
+import 'package:milgaya/services/firestore_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -108,25 +109,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
         }
       );
     } else {
-      if (_otpController.text.length == 4 || _otpController.text.length == 6) { // Firebase can send 6-digit OTPs
+      if (_otpController.text.length == 4 || _otpController.text.length == 6) { 
         setState(() => _isLoading = true);
         
         await FirebaseAuthService().verifyOTP(
           _otpController.text,
           onSuccess: () async {
             // Once OTP is valid, create the Email/Password account
+            // If email is not provided, create a dummy email to support Phone+Password login
+            String loginEmail = _emailController.text.isNotEmpty ? _emailController.text : '${_phoneController.text}@milgaya.app';
+            
             await FirebaseAuthService().signUpWithEmail(
-              _emailController.text, 
+              loginEmail, 
               _passwordController.text,
-              onSuccess: () {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully! Please login.')));
-                  context.go('/login');
+              onSuccess: () async {
+                try {
+                  // Save user details to Firestore
+                  final uid = FirebaseAuthService().getCurrentUserId() ?? 'temp_mock_id';
+                  await FirestoreService().createUser(uid, {
+                    'name': _nameController.text,
+                    'email': _emailController.text, // Store actual email (or empty)
+                    'phone': _phoneController.text,
+                    'city': _cityController.text,
+                    'state': _stateController.text,
+                    'loginMethod': 'Phone + Password',
+                    'status': 'Active',
+                    'role': 'user',
+                  });
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created successfully! Please login.')));
+                    context.go('/login');
+                  }
+                } catch (e) {
+                  setState(() => _isLoading = false);
+                  _showError("Database Error: $e");
                 }
               },
               onError: (error) {
                 setState(() => _isLoading = false);
-                _showError("Phone verified, but Email Error: $error");
+                _showError("Phone verified, but Auth Error: $error");
               }
             );
           },

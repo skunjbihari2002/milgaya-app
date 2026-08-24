@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:milgaya/services/mock_database.dart';
+import 'package:milgaya/services/firestore_service.dart';
 
 class PostTab extends StatefulWidget {
   final Function(int) onNavigateToTab;
@@ -23,41 +23,45 @@ class _PostTabState extends State<PostTab> {
     }
 
     setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(seconds: 1)); // Simulate network
 
-    if (_postType == 'Help Request') {
-      MockDatabase().addHelpRequest({
-        'category': 'OTHER',
-        'title': _titleController.text,
-        'desc': _descController.text,
-        'user': 'Me',
-        'time': 'Just now',
-        'price': _priceController.text.isNotEmpty ? '\$${_priceController.text}' : 'Negotiable',
-        'icon': 'build'
-      });
-      widget.onNavigateToTab(0); // Go to Help tab
-    } else {
-      MockDatabase().addLostFoundItem({
-        'type': _postType == 'Lost Item' ? 'Lost' : 'Found',
-        'title': _titleController.text,
-        'desc': _descController.text,
-        'user': 'Me',
-        'time': 'Just now',
-        'tagColor': _postType == 'Lost Item' ? 'red' : 'green',
-        'image': null
-      });
-      widget.onNavigateToTab(1); // Go to Lost & Found tab
-    }
+    try {
+      if (_postType == 'Help Request') {
+        await FirestoreService().createHelpRequest({
+          'category': 'OTHER',
+          'title': _titleController.text,
+          'desc': _descController.text,
+          'user': 'Current User', // TODO: Get actual name from Auth Profile
+          'time': 'Just now', // Not strictly needed with Firestore timestamp, but good for UI fallback
+          'price': _priceController.text.isNotEmpty ? '\$${_priceController.text}' : 'Negotiable',
+          'icon': 'build',
+          'status': 'open'
+        });
+        widget.onNavigateToTab(0); // Go to Help tab
+      } else {
+        await FirestoreService().createPost({
+          'type': _postType == 'Lost Item' ? 'Lost' : 'Found',
+          'title': _titleController.text,
+          'desc': _descController.text,
+          'user': 'Current User', 
+          'time': 'Just now',
+          'tagColor': _postType == 'Lost Item' ? 'red' : 'green',
+          'status': 'Active'
+        });
+        widget.onNavigateToTab(1); // Go to Lost & Found tab
+      }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Posted successfully!'), backgroundColor: Colors.green));
-      // Clear form
-      setState(() {
-        _isSubmitting = false;
-        _titleController.clear();
-        _descController.clear();
-        _priceController.clear();
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Posted successfully!'), backgroundColor: Colors.green));
+        setState(() {
+          _isSubmitting = false;
+          _titleController.clear();
+          _descController.clear();
+          _priceController.clear();
+        });
+      }
+    } catch (e) {
+      setState(() => _isSubmitting = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to post: $e'), backgroundColor: Colors.red));
     }
   }
 

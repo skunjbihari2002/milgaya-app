@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:milgaya/services/firestore_service.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -9,29 +11,6 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   int _selectedIndex = 0;
-
-  // Mock Data States for Interactive Feel
-  List<Map<String, dynamic>> _users = [
-    {'id': 'USR-001', 'name': 'Rahul Sharma', 'method': 'Password', 'status': 'Active'},
-    {'id': 'USR-002', 'name': '+91 9876543210', 'method': 'OTP Verification', 'status': 'Active'},
-    {'id': 'USR-003', 'name': 'Priya Singh', 'method': 'Google', 'status': 'Active'},
-    {'id': 'USR-004', 'name': 'Suspicious User', 'method': 'OTP', 'status': 'Banned'},
-  ];
-
-  List<Map<String, dynamic>> _lostFoundItems = [
-    {'id': 'ITEM-991', 'type': 'Lost', 'title': 'Black Leather Wallet', 'location': 'Bhopal DB Mall', 'status': 'Pending'},
-    {'id': 'ITEM-992', 'type': 'Found', 'title': 'iPhone 13 Pro', 'location': 'Indore Airport', 'status': 'Matched'},
-    {'id': 'ITEM-993', 'type': 'Lost', 'title': 'College ID Card', 'location': 'Jabalpur Station', 'status': 'Resolved'},
-  ];
-
-  List<Map<String, dynamic>> _safeHubs = [
-    {'id': 'HUB-101', 'name': 'Sharma Electronics', 'location': 'Bhopal', 'status': 'Pending'},
-    {'id': 'HUB-102', 'name': 'City Cafe', 'location': 'Indore', 'status': 'Active'},
-  ];
-
-  List<Map<String, dynamic>> _disputes = [
-    {'id': 'DSP-501', 'reporter': 'USR-001', 'accused': 'USR-004', 'reason': 'Asked for money before returning item', 'status': 'Open'},
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +72,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Wrap(
             spacing: 16, runSpacing: 16,
             children: [
-              _buildStatCard('Total Users', '${_users.length}k', Colors.blue, Icons.people),
-              _buildStatCard('Active Sessions', '342', Colors.green, Icons.phone_android),
-              _buildStatCard('Items Tracked', '${_lostFoundItems.length}k', Colors.orange, Icons.search),
-              _buildStatCard('Pending Disputes', '${_disputes.length}', Colors.red, Icons.warning),
+              _buildStatCard('Total Users (Live)', FirestoreService().getUsersStream(), Colors.blue, Icons.people),
+              _buildStatCard('Items Tracked (Live)', FirestoreService().getPostsStream('All'), Colors.orange, Icons.search),
+              _buildStatCard('Pending Disputes (Live)', FirestoreService().getDisputesStream(), Colors.red, Icons.warning),
+              _buildStatCard('Active Safe Hubs (Live)', FirestoreService().getSafeHubsStream(), Colors.green, Icons.security),
             ],
           ),
           const SizedBox(height: 32),
@@ -107,11 +86,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: const [
-                ListTile(leading: Icon(Icons.person_add, color: Colors.blue), title: Text('New user registered via OTP (ID: USR-982)'), subtitle: Text('2 mins ago')),
+                ListTile(leading: Icon(Icons.person_add, color: Colors.blue), title: Text('Admin panel connected to Firestore successfully.'), subtitle: Text('Just now')),
                 Divider(height: 1),
-                ListTile(leading: Icon(Icons.check_circle, color: Colors.green), title: Text('Match found for iPhone 13 in Indore'), subtitle: Text('15 mins ago')),
-                Divider(height: 1),
-                ListTile(leading: Icon(Icons.security, color: Colors.purple), title: Text('New Safe Hub application submitted'), subtitle: Text('1 hour ago')),
+                ListTile(leading: Icon(Icons.sync, color: Colors.green), title: Text('Real-time sync enabled for all tabs.'), subtitle: Text('Just now')),
               ],
             ),
           )
@@ -120,7 +97,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
+  Widget _buildStatCard(String title, Stream<QuerySnapshot> stream, Color color, IconData icon) {
     return Container(
       width: 250,
       padding: const EdgeInsets.all(20),
@@ -131,12 +108,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+              Expanded(child: Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.bold))),
               Icon(icon, color: color.withOpacity(0.7)),
             ],
           ),
           const SizedBox(height: 12),
-          Text(value, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color)),
+          StreamBuilder<QuerySnapshot>(
+            stream: stream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(height: 32, width: 32, child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Text('Error', style: TextStyle(fontSize: 16, color: Colors.red.shade300));
+              }
+              int count = snapshot.data?.docs.length ?? 0;
+              return Text(count.toString(), style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color));
+            }
+          ),
         ],
       ),
     );
@@ -149,41 +138,63 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('User Database', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          TextField(decoration: InputDecoration(hintText: 'Search by User ID, Name, or Phone...', prefixIcon: const Icon(Icons.search), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)))),
+          const Text('Live User Database', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           Expanded(
             child: Card(
-              child: ListView(
-                children: [
-                  DataTable(
-                    columns: const [
-                      DataColumn(label: Text('User ID')),
-                      DataColumn(label: Text('Name / Phone')),
-                      DataColumn(label: Text('Login Method')),
-                      DataColumn(label: Text('Status')),
-                      DataColumn(label: Text('Actions')),
-                    ],
-                    rows: _users.map((user) => DataRow(cells: [
-                      DataCell(Text(user['id'], style: const TextStyle(fontWeight: FontWeight.bold))),
-                      DataCell(Text(user['name'])),
-                      DataCell(Chip(label: Text(user['method'], style: const TextStyle(fontSize: 12)))),
-                      DataCell(Text(user['status'], style: TextStyle(color: user['status'] == 'Active' ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
-                      DataCell(
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              user['status'] = user['status'] == 'Active' ? 'Banned' : 'Active';
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User ${user['id']} status updated to ${user['status']}')));
-                          },
-                          child: Text(user['status'] == 'Active' ? 'Ban User' : 'Unban', style: TextStyle(color: user['status'] == 'Active' ? Colors.red : Colors.green)),
-                        )
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirestoreService().getUsersStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  if (snapshot.hasError) return const Center(child: Text('Error loading users'));
+                  
+                  final users = snapshot.data?.docs ?? [];
+                  if (users.isEmpty) return const Center(child: Text('No users registered yet.'));
+
+                  return ListView(
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('User ID')),
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('Phone')),
+                            DataColumn(label: Text('Login Method')),
+                            DataColumn(label: Text('Status')),
+                            DataColumn(label: Text('Actions')),
+                          ],
+                          rows: users.map((doc) {
+                            final user = doc.data() as Map<String, dynamic>;
+                            final id = doc.id;
+                            final name = user['name'] ?? 'Unknown';
+                            final phone = user['phone'] ?? 'N/A';
+                            final method = user['loginMethod'] ?? 'Unknown';
+                            final status = user['status'] ?? 'Active';
+                            
+                            return DataRow(cells: [
+                              DataCell(Text(id.length > 8 ? id.substring(0,8)+'...' : id, style: const TextStyle(fontWeight: FontWeight.bold))),
+                              DataCell(Text(name)),
+                              DataCell(Text(phone)),
+                              DataCell(Chip(label: Text(method, style: const TextStyle(fontSize: 12)))),
+                              DataCell(Text(status, style: TextStyle(color: status == 'Active' ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
+                              DataCell(
+                                TextButton(
+                                  onPressed: () async {
+                                    String newStatus = status == 'Active' ? 'Banned' : 'Active';
+                                    await FirestoreService().updateUserStatus(id, newStatus);
+                                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User status updated to \$newStatus')));
+                                  },
+                                  child: Text(status == 'Active' ? 'Ban User' : 'Unban', style: TextStyle(color: status == 'Active' ? Colors.red : Colors.green)),
+                                )
+                              ),
+                            ]);
+                          }).toList(),
+                        ),
                       ),
-                    ])).toList(),
-                  ),
-                ],
+                    ],
+                  );
+                }
               ),
             ),
           )
@@ -199,37 +210,49 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Lost & Found Items', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text('Live Lost & Found Posts', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           Expanded(
             child: Card(
-              child: ListView.separated(
-                itemCount: _lostFoundItems.length,
-                separatorBuilder: (ctx, i) => const Divider(height: 1),
-                itemBuilder: (ctx, i) {
-                  final item = _lostFoundItems[i];
-                  return ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: item['type'] == 'Lost' ? Colors.red.shade100 : Colors.green.shade100,
-                      child: Icon(item['type'] == 'Lost' ? Icons.search : Icons.check, color: item['type'] == 'Lost' ? Colors.red : Colors.green),
-                    ),
-                    title: Text('${item['title']} (${item['id']})'),
-                    subtitle: Text('Location: ${item['location']} | Status: ${item['status']}'),
-                    trailing: PopupMenuButton(
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(value: 'resolve', child: Text('Mark as Resolved')),
-                        const PopupMenuItem(value: 'delete', child: Text('Delete Post', style: TextStyle(color: Colors.red))),
-                      ],
-                      onSelected: (val) {
-                        setState(() {
-                          if (val == 'resolve') item['status'] = 'Resolved';
-                          if (val == 'delete') _lostFoundItems.removeAt(i);
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item updated successfully')));
-                      },
-                    ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirestoreService().getPostsStream('All'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  if (snapshot.hasError) return const Center(child: Text('Error loading posts'));
+                  
+                  final posts = snapshot.data?.docs ?? [];
+                  if (posts.isEmpty) return const Center(child: Text('No posts found.'));
+
+                  return ListView.separated(
+                    itemCount: posts.length,
+                    separatorBuilder: (ctx, i) => const Divider(height: 1),
+                    itemBuilder: (ctx, i) {
+                      final doc = posts[i];
+                      final item = doc.data() as Map<String, dynamic>;
+                      final status = item['status'] ?? 'Active';
+                      
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: item['type'] == 'Lost' ? Colors.red.shade100 : Colors.green.shade100,
+                          child: Icon(item['type'] == 'Lost' ? Icons.search : Icons.check, color: item['type'] == 'Lost' ? Colors.red : Colors.green),
+                        ),
+                        title: Text('\${item['title']} (by \${item['user']})'),
+                        subtitle: Text('Status: \$status | Type: \${item['type']}'),
+                        trailing: PopupMenuButton(
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'resolve', child: Text('Mark as Resolved')),
+                            const PopupMenuItem(value: 'delete', child: Text('Delete Post', style: TextStyle(color: Colors.red))),
+                          ],
+                          onSelected: (val) async {
+                            if (val == 'resolve') await FirestoreService().updatePostStatus(doc.id, 'Resolved');
+                            if (val == 'delete') await FirestoreService().deletePost(doc.id);
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item updated in Firestore')));
+                          },
+                        ),
+                      );
+                    },
                   );
-                },
+                }
               ),
             ),
           )
@@ -245,37 +268,51 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Safe Hubs Network', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text('Live Safe Hubs Network', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           Expanded(
             child: Card(
-              child: ListView.separated(
-                itemCount: _safeHubs.length,
-                separatorBuilder: (ctx, i) => const Divider(height: 1),
-                itemBuilder: (ctx, i) {
-                  final hub = _safeHubs[i];
-                  return ListTile(
-                    title: Text('${hub['name']} (${hub['id']})'),
-                    subtitle: Text('Location: ${hub['location']} | Status: ${hub['status']}'),
-                    trailing: hub['status'] == 'Pending' 
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                              onPressed: () => setState(() => hub['status'] = 'Active'),
-                              child: const Text('Approve'),
-                            ),
-                            const SizedBox(width: 8),
-                            TextButton(
-                              onPressed: () => setState(() => _safeHubs.removeAt(i)),
-                              child: const Text('Reject', style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        )
-                      : Chip(label: Text(hub['status']), backgroundColor: Colors.green.shade100),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirestoreService().getSafeHubsStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  if (snapshot.hasError) return const Center(child: Text('Error loading safe hubs'));
+                  
+                  final hubs = snapshot.data?.docs ?? [];
+                  if (hubs.isEmpty) return const Center(child: Text('No safe hubs registered.'));
+
+                  return ListView.separated(
+                    itemCount: hubs.length,
+                    separatorBuilder: (ctx, i) => const Divider(height: 1),
+                    itemBuilder: (ctx, i) {
+                      final doc = hubs[i];
+                      final hub = doc.data() as Map<String, dynamic>;
+                      final status = hub['status'] ?? 'Pending';
+                      
+                      return ListTile(
+                        title: Text('\${hub['name']}'),
+                        subtitle: Text('Location: \${hub['location']} | Status: \$status'),
+                        trailing: status == 'Pending' 
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                  onPressed: () => FirestoreService().updateSafeHubStatus(doc.id, 'Active'),
+                                  child: const Text('Approve'),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () => FirestoreService().updateSafeHubStatus(doc.id, 'Rejected'),
+                                  child: const Text('Reject', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            )
+                          : Chip(label: Text(status), backgroundColor: status == 'Active' ? Colors.green.shade100 : Colors.red.shade100),
+                      );
+                    },
                   );
-                },
+                }
               ),
             ),
           )
@@ -291,31 +328,41 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Disputes & Frauds', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text('Live Disputes & Frauds', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           Expanded(
             child: Card(
-              child: _disputes.isEmpty 
-                ? const Center(child: Text('No active disputes. Everything is peaceful.', style: TextStyle(color: Colors.grey, fontSize: 16)))
-                : ListView.separated(
-                itemCount: _disputes.length,
-                separatorBuilder: (ctx, i) => const Divider(height: 1),
-                itemBuilder: (ctx, i) {
-                  final disp = _disputes[i];
-                  return ListTile(
-                    leading: const Icon(Icons.warning, color: Colors.red, size: 40),
-                    title: Text('Report against ${disp['accused']} by ${disp['reporter']}'),
-                    subtitle: Text('Reason: ${disp['reason']}'),
-                    trailing: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                      onPressed: () {
-                        setState(() => _disputes.removeAt(i));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute resolved. User banned.')));
-                      },
-                      child: const Text('Ban Accused & Close'),
-                    ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirestoreService().getDisputesStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  if (snapshot.hasError) return const Center(child: Text('Error loading disputes'));
+                  
+                  final disputes = snapshot.data?.docs ?? [];
+                  if (disputes.isEmpty) return const Center(child: Text('No active disputes. Everything is peaceful.', style: TextStyle(color: Colors.grey, fontSize: 16)));
+                  
+                  return ListView.separated(
+                    itemCount: disputes.length,
+                    separatorBuilder: (ctx, i) => const Divider(height: 1),
+                    itemBuilder: (ctx, i) {
+                      final doc = disputes[i];
+                      final disp = doc.data() as Map<String, dynamic>;
+                      return ListTile(
+                        leading: const Icon(Icons.warning, color: Colors.red, size: 40),
+                        title: Text('Report against \${disp['accused']} by \${disp['reporter']}'),
+                        subtitle: Text('Reason: \${disp['reason']}'),
+                        trailing: ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                          onPressed: () async {
+                            await FirestoreService().deleteDispute(doc.id);
+                            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute resolved. User banned.')));
+                          },
+                          child: const Text('Ban Accused & Close'),
+                        ),
+                      );
+                    },
                   );
-                },
+                }
               ),
             ),
           )
